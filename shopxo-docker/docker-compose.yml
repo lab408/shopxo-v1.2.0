@@ -1,0 +1,50 @@
+networks:
+  shopxonet:
+    name: shopxonet
+    driver: bridge
+
+services:
+  web:
+    image: nginx
+    volumes:
+      - "./etc/nginx/default.conf:/etc/nginx/conf.d/default.conf"
+      - "../../shopxo-v1.2.0:/var/www/html" # shopxo代码挂载在nginx里面
+      - "./etc/nginx/default.template.conf:/etc/nginx/conf.d/default.template"
+    ports:
+      - "10000:80"
+      - "3000:443"
+    environment:
+      - NGINX_HOST=localhost # 可以设置nginx的域名
+    command: /bin/sh -c "envsubst '$$NGINX_HOST' < /etc/nginx/conf.d/default.template > /etc/nginx/conf.d/default.conf && nginx -g 'daemon off;'"
+    restart: always
+    depends_on:
+      - php
+      - mysqldb
+    networks:
+      - shopxonet
+  php:
+    image: nanoninja/php-fpm:7.4.4
+    restart: always
+    volumes:
+      - "./etc/php/php.ini:/usr/local/etc/php/conf.d/php.ini"
+      - "../../shopxo-v1.2.0:/var/www/html" # shopxo代码挂载在php里面
+    networks:
+      - shopxonet
+  mysqldb:
+    image: mysql:5.7
+    container_name: mysqlcon
+    restart: always
+#    env_file:
+#      - "../example.env"
+    environment:
+      - MYSQL_DATABASE=shopxo
+      - MYSQL_ROOT_PASSWORD=123
+      - MYSQL_USER=wenar
+      - MYSQL_PASSWORD=123
+    ports:
+      - "10001:3306"
+#    volumes:
+#      - "/data/shopxo_db:/var/lib/mysql" # mysql数据库持久化配置
+#      - "./etc/db/my.cnf:/etc/mysql/my.cnf" # 修改mysql配置,首页统计
+    networks:
+      - shopxonet
